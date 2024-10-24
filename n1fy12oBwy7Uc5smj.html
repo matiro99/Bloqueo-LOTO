@@ -1,0 +1,823 @@
+<html><head><base href="https://websim-loto-equipment.io/"><meta charset="UTF-8">
+<title>Equipos Bloqueados LOTO - LOTO Dashboard</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+<style>
+:root {
+    --primary: #2C3E50;
+    --danger: #E74C3C;
+    --warning: #F39C12;
+    --success: #27AE60;
+    --info: #3498DB;
+    --light: #ECF0F1;
+    --dark: #2C3E50;
+    --gold: #FFD700;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background: #f5f6fa;
+    color: var(--dark);
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.header-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.btn {
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: white;
+}
+
+.export-btn {
+    background: var(--primary);
+}
+
+.lock-btn {
+    background: var(--success);
+}
+
+.export-btn:hover {
+    background: #34495E;
+}
+
+.lock-btn:hover {
+    background: #219a52;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 500px;
+    position: relative;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.close-modal {
+    background: none;
+    border: none;
+    font-size: 1.5em;
+    cursor: pointer;
+    color: var(--dark);
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.form-group input, .form-group select, .form-group textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.submit-btn {
+    background: var(--success);
+}
+
+.cancel-btn {
+    background: var(--danger);
+}
+
+.equipment-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+    border-radius: 8px;
+    overflow: hidden;
+    background: white;
+}
+
+.equipment-table thead {
+    background: var(--primary);
+    color: white;
+}
+
+.equipment-table th {
+    padding: 15px;
+    text-align: left;
+    font-weight: 600;
+}
+
+.equipment-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.equipment-table tbody tr {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.equipment-table tbody tr:hover {
+    background-color: #f8f9fa;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.equipment-table tbody tr {
+    animation: slideIn 0.5s ease forwards;
+}
+
+.stats-container {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 30px;
+    gap: 20px;
+}
+
+.footer-counter, .king-of-locks {
+    background: var(--primary);
+    color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+    flex: 1;
+    text-align: center;
+    transition: transform 0.3s ease;
+}
+
+.footer-counter:hover, .king-of-locks:hover {
+    transform: translateY(-5px);
+}
+
+.count-label {
+    font-size: 1.2em;
+    color: var(--light);
+    margin-bottom: 10px;
+}
+
+.count-number {
+    font-size: 3em;
+    font-weight: bold;
+    color: white;
+}
+
+.king-title {
+    font-size: 1.4em;
+    color: var(--light);
+    margin-bottom: 10px;
+}
+
+.king-name {
+    font-size: 1.8em;
+    font-weight: bold;
+    color: white;
+    margin-bottom: 5px;
+}
+
+.king-stats {
+    color: var(--light);
+    font-size: 1.1em;
+}
+
+.fas {
+    margin-right: 8px;
+}
+
+@keyframes floatingCrown {
+    0% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-10px) rotate(5deg); }
+    100% { transform: translateY(0px) rotate(0deg); }
+}
+
+.king-title::before {
+    content: '👑';
+    font-size: 1.5em;
+    margin-right: 10px;
+    display: inline-block;
+    animation: floatingCrown 2s ease-in-out infinite;
+}
+
+.data-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    padding: 20px 0;
+}
+
+.import-btn {
+    background: var(--info);
+}
+
+.import-btn:hover {
+    background: #2980b9;
+}
+
+.data-buttons .btn {
+    width: 100%;
+    justify-content: center;
+}
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1><i class="fas fa-lock"></i> Equipos Bloqueados LOTO</h1>
+        <div class="header-buttons">
+            <button class="btn lock-btn" onclick="openModal()">
+                <i class="fas fa-lock"></i> Bloquear/Desbloquear Equipo
+            </button>
+            <button class="btn export-btn" onclick="openDataModal()">
+                <i class="fas fa-database"></i> Data
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal para Bloquear/Desbloquear -->
+    <div id="lockModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Bloquear/Desbloquear Equipo</h2>
+                <button class="close-modal" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="form-group">
+                <label>Acción:</label>
+                <select id="actionType" onchange="toggleFormFields()">
+                    <option value="lock">Bloquear Equipo</option>
+                    <option value="unlock">Desbloquear Equipo</option>
+                </select>
+            </div>
+            <div id="lockForm">
+                <div class="form-group">
+                    <label>Código del Equipo:</label>
+                    <select id="equipmentId" required onchange="updateEquipmentName()">
+                        <option value="">Seleccione un equipo</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Nombre del Equipo:</label>
+                    <input type="text" id="equipmentName" required readonly>
+                </div>
+                <div class="form-group">
+                    <label>Técnico:</label>
+                    <select id="technician" required>
+                        <option value="">Seleccione un técnico</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Número de Candado:</label>
+                    <select id="lockNumber" required>
+                        <option value="">Seleccione un candado</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Observaciones:</label>
+                    <textarea id="observations" rows="3"></textarea>
+                </div>
+            </div>
+            <div id="unlockForm" style="display: none;">
+                <div class="form-group">
+                    <label>Seleccionar Equipo a Desbloquear:</label>
+                    <select id="equipmentToUnlock">
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn cancel-btn" onclick="closeModal()">Cancelar</button>
+                <button class="btn submit-btn" onclick="submitLockUnlock()">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Data -->
+    <div id="dataModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Gestión de Data</h2>
+                <button class="close-modal" onclick="closeDataModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="data-buttons">
+                    <button class="btn export-btn" onclick="exportToExcel()">
+                        <i class="fas fa-file-export"></i> Descargar Data
+                    </button>
+                    <button class="btn export-btn" onclick="downloadTemplate()">
+                        <i class="fas fa-file-download"></i> Descargar Plantilla
+                    </button>
+                    <div class="upload-container">
+                        <input type="file" id="fileUpload" accept=".xlsx,.xls" style="display:none" onchange="handleFileUpload(this.files)">
+                        <button class="btn import-btn" onclick="document.getElementById('fileUpload').click()">
+                            <i class="fas fa-file-upload"></i> Cargar Data
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resto del contenido previo -->
+    <div class="main-content">
+        <div class="equipment-list">
+            <table class="equipment-table">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Nombre</th>
+                        <th>Técnico</th>
+                        <th>N° Candado</th>
+                        <th>Inicio de bloqueo</th>
+                        <th>Observaciones</th>
+                    </tr>
+                </thead>
+                <tbody id="equipmentTableBody">
+                </tbody>
+            </table>
+        </div>
+        <div class="stats-container">
+            <div class="footer-counter">
+                <div class="count-label">
+                    <i class="fas fa-lock"></i>Total de equipos bloqueados
+                </div>
+                <div class="count-number" id="total-locks">3</div>
+            </div>
+            <div class="king-of-locks">
+                <div class="king-title">Rey del Bloqueo</div>
+                <div class="king-name" id="king-name">-</div>
+                <div class="king-stats" id="king-stats">-</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const equipmentOptions = [
+    { id: 'P-101', name: 'Bomba Centrífuga' },
+    { id: 'M-201', name: 'Motor Eléctrico' },
+    { id: 'V-301', name: 'Válvula de Control' },
+    { id: 'C-401', name: 'Compresor' },
+    { id: 'T-501', name: 'Turbina' }
+];
+
+const technicianOptions = [
+    'Juan Pérez',
+    'María García', 
+    'Carlos Rodríguez',
+    'Ana Martínez',
+    'Pedro López'
+];
+
+const lockNumberOptions = [
+    '123',
+    '456',
+    '789',
+    '321',
+    '654',
+    '987'
+];
+
+let lockHistory = [
+    {
+        equipmentId: 'P-101',
+        name: 'Bomba Centrífuga',
+        technician: 'Juan Pérez',
+        lockNumber: '123, 456',
+        date: '15/05/2023 10:30',
+        observations: 'Mantenimiento preventivo en curso',
+        startTime: '2023-05-15 10:30:00',
+        endTime: null
+    },
+    {
+        equipmentId: 'M-201',
+        name: 'Motor Eléctrico',
+        technician: 'María García',
+        lockNumber: '789',
+        date: '15/05/2023 09:15',
+        observations: 'Cambio de rodamientos',
+        startTime: '2023-05-15 09:15:00',
+        endTime: '2023-05-15 14:15:00'
+    },
+    {
+        equipmentId: 'V-301',
+        name: 'Válvula de Control',
+        technician: 'Carlos Rodríguez',
+        lockNumber: '321',
+        date: '15/05/2023 11:45',
+        observations: 'Calibración programada',
+        startTime: '2023-05-15 11:45:00',
+        endTime: null
+    }
+];
+
+function openModal() {
+    document.getElementById('lockModal').style.display = 'flex';
+    populateDropdowns();
+    updateUnlockSelect();
+}
+
+function closeModal() {
+    document.getElementById('lockModal').style.display = 'none';
+    resetForm();
+}
+
+function toggleFormFields() {
+    const action = document.getElementById('actionType').value;
+    document.getElementById('lockForm').style.display = action === 'lock' ? 'block' : 'none';
+    document.getElementById('unlockForm').style.display = action === 'unlock' ? 'block' : 'none';
+    updateUnlockSelect();
+}
+
+function populateDropdowns() {
+    const equipmentSelect = document.getElementById('equipmentId');
+    equipmentSelect.innerHTML = '<option value="">Seleccione un equipo</option>';
+    equipmentOptions.forEach(equipment => {
+        const option = document.createElement('option');
+        option.value = equipment.id;
+        option.textContent = equipment.id;
+        equipmentSelect.appendChild(option);
+    });
+
+    const technicianSelect = document.getElementById('technician');
+    technicianSelect.innerHTML = '<option value="">Seleccione un técnico</option>';
+    technicianOptions.forEach(technician => {
+        const option = document.createElement('option');
+        option.value = technician;
+        option.textContent = technician;
+        technicianSelect.appendChild(option);
+    });
+
+    const lockNumberSelect = document.getElementById('lockNumber');
+    lockNumberSelect.innerHTML = '<option value="">Seleccione un candado</option>';
+    lockNumberOptions.forEach(lockNum => {
+        const option = document.createElement('option');
+        option.value = lockNum;
+        option.textContent = lockNum;
+        lockNumberSelect.appendChild(option);
+    });
+}
+
+function updateEquipmentName() {
+    const equipmentId = document.getElementById('equipmentId').value;
+    const equipment = equipmentOptions.find(eq => eq.id === equipmentId);
+    const equipmentNameInput = document.getElementById('equipmentName');
+    equipmentNameInput.value = equipment ? equipment.name : '';
+}
+
+function updateUnlockSelect() {
+    const select = document.getElementById('equipmentToUnlock');
+    select.innerHTML = '';
+    const activeEquipments = lockHistory.filter(lock => !lock.endTime);
+    
+    activeEquipments.forEach(equipment => {
+        const option = document.createElement('option');
+        option.value = equipment.equipmentId;
+        option.textContent = `${equipment.equipmentId} - ${equipment.name}`;
+        select.appendChild(option);
+    });
+}
+
+function submitLockUnlock() {
+    const action = document.getElementById('actionType').value;
+    
+    if (action === 'lock') {
+        const newLock = {
+            equipmentId: document.getElementById('equipmentId').value,
+            name: document.getElementById('equipmentName').value,
+            technician: document.getElementById('technician').value,
+            lockNumber: document.getElementById('lockNumber').value,
+            observations: document.getElementById('observations').value,
+            date: new Date().toLocaleString(),
+            startTime: new Date().toISOString(),
+            endTime: null
+        };
+        
+        lockHistory.push(newLock);
+    } else {
+        const equipmentId = document.getElementById('equipmentToUnlock').value;
+        const equipment = lockHistory.find(lock => lock.equipmentId === equipmentId && !lock.endTime);
+        
+        if (equipment) {
+            equipment.endTime = new Date().toISOString();
+        }
+    }
+    
+    refreshData();
+    closeModal();
+}
+
+function resetForm() {
+    document.getElementById('equipmentId').value = '';
+    document.getElementById('equipmentName').value = '';
+    document.getElementById('technician').value = '';
+    document.getElementById('lockNumber').value = '';
+    document.getElementById('observations').value = '';
+    document.getElementById('actionType').value = 'lock';
+    toggleFormFields();
+    populateDropdowns();
+}
+
+let monthlyLockHistory = [
+    ...Array(15).fill().map(() => ({
+        technician: 'Juan Pérez',
+        action: 'lock',
+        date: new Date()
+    })),
+    ...Array(12).fill().map(() => ({
+        technician: 'Juan Pérez',
+        action: 'unlock',
+        date: new Date()
+    })),
+    ...Array(20).fill().map(() => ({
+        technician: 'María García',
+        action: 'lock',
+        date: new Date()
+    })),
+    ...Array(18).fill().map(() => ({
+        technician: 'María García',
+        action: 'unlock',
+        date: new Date()
+    })),
+    ...Array(10).fill().map(() => ({
+        technician: 'Carlos Rodríguez',
+        action: 'lock',
+        date: new Date()
+    })),
+    ...Array(8).fill().map(() => ({
+        technician: 'Carlos Rodríguez',
+        action: 'unlock',
+        date: new Date()
+    })),
+];
+
+function calculateLockingKing() {
+    const technicianStats = {};
+    
+    monthlyLockHistory.forEach(action => {
+        if (!technicianStats[action.technician]) {
+            technicianStats[action.technician] = {
+                locks: 0,
+                unlocks: 0,
+                total: 0
+            };
+        }
+        
+        if (action.action === 'lock') {
+            technicianStats[action.technician].locks++;
+        } else {
+            technicianStats[action.technician].unlocks++;
+        }
+        technicianStats[action.technician].total++;
+    });
+
+    let kingTechnician = null;
+    let maxOperations = 0;
+
+    for (const [technician, stats] of Object.entries(technicianStats)) {
+        if (stats.total > maxOperations) {
+            maxOperations = stats.total;
+            kingTechnician = {
+                name: technician,
+                stats: stats
+            };
+        }
+    }
+
+    return kingTechnician;
+}
+
+function updateKingOfLocks() {
+    const king = calculateLockingKing();
+    if (king) {
+        document.getElementById('king-name').textContent = king.name;
+        document.getElementById('king-stats').textContent = 
+            `Bloqueos: ${king.stats.locks} | Desbloqueos: ${king.stats.unlocks} | Total: ${king.stats.total}`;
+    }
+}
+
+function exportToExcel() {
+    const exportData = lockHistory.map(item => ({
+        'Código': item.equipmentId,
+        'Nombre': item.name,
+        'Técnico': item.technician,
+        'N° Candado': item.lockNumber,
+        'Fecha': item.date,
+        'Observaciones': item.observations,
+        'Inicio Bloqueo': item.startTime,
+        'Fin Bloqueo': item.endTime || 'En curso'
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Historial Bloqueos");
+    XLSX.writeFile(wb, "historial_bloqueos.xlsx");
+}
+
+function downloadTemplate() {
+    const templateData = {
+        equipos: equipmentOptions.map(eq => ({
+            'Código Equipo': eq.id,
+            'Nombre Equipo': eq.name
+        })),
+        tecnicos: technicianOptions.map(tech => ({
+            'Técnico': tech
+        })),
+        candados: lockNumberOptions.map(lock => ({
+            'Número de Candado': lock
+        }))
+    };
+
+    const wb = XLSX.utils.book_new();
+    
+    const wsEquipos = XLSX.utils.json_to_sheet(templateData.equipos);
+    XLSX.utils.book_append_sheet(wb, wsEquipos, "Equipos");
+    
+    const wsTecnicos = XLSX.utils.json_to_sheet(templateData.tecnicos);
+    XLSX.utils.book_append_sheet(wb, wsTecnicos, "Técnicos");
+    
+    const wsCandados = XLSX.utils.json_to_sheet(templateData.candados);
+    XLSX.utils.book_append_sheet(wb, wsCandados, "Candados");
+    
+    const wsHistorial = XLSX.utils.json_to_sheet(lockHistory.map(item => ({
+        'Código': item.equipmentId,
+        'Nombre': item.name,
+        'Técnico': item.technician,
+        'N° Candado': item.lockNumber,
+        'Fecha': item.date,
+        'Observaciones': item.observations,
+        'Inicio Bloqueo': item.startTime,
+        'Fin Bloqueo': item.endTime || 'En curso'
+    })));
+    XLSX.utils.book_append_sheet(wb, wsHistorial, "Historial");
+
+    XLSX.writeFile(wb, "plantilla_loto.xlsx");
+}
+
+function openDataModal() {
+    document.getElementById('dataModal').style.display = 'flex';
+}
+
+function closeDataModal() {
+    document.getElementById('dataModal').style.display = 'none';
+}
+
+function handleFileUpload(files) {
+    if (files.length === 0) return;
+    
+    const file = files[0];
+    const reader = new FileReader();
+    
+    reader.onload = function(e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, {type: 'array'});
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+            processUploadedData(jsonData);
+            alert('Data cargada exitosamente');
+            closeDataModal();
+        } catch (error) {
+            alert('Error al procesar el archivo: ' + error.message);
+        }
+    };
+    
+    reader.readAsArrayBuffer(file);
+}
+
+function processUploadedData(jsonData) {
+    equipmentOptions.length = 0;
+    technicianOptions.length = 0;
+    lockNumberOptions.length = 0;
+    
+    jsonData.forEach(row => {
+        if (row.equipment_id && row.equipment_name) {
+            equipmentOptions.push({
+                id: row.equipment_id,
+                name: row.equipment_name
+            });
+        }
+        if (row.technician && !technicianOptions.includes(row.technician)) {
+            technicianOptions.push(row.technician);
+        }
+        if (row.lock_number && !lockNumberOptions.includes(row.lock_number)) {
+            lockNumberOptions.push(row.lock_number);
+        }
+    });
+    
+    populateDropdowns();
+}
+
+function updateLocksCount() {
+    const activeLocks = lockHistory.filter(lock => !lock.endTime).length;
+    document.getElementById('total-locks').textContent = activeLocks;
+}
+
+function refreshData() {
+    const tableBody = document.getElementById('equipmentTableBody');
+    const activeEquipments = lockHistory.filter(lock => !lock.endTime);
+    
+    tableBody.innerHTML = '';
+    
+    activeEquipments.forEach((lock, index) => {
+        const tr = document.createElement('tr');
+        tr.style.animationDelay = `${index * 0.1}s`;
+        tr.innerHTML = `
+            <td>${lock.equipmentId}</td>
+            <td>${lock.name}</td>
+            <td>${lock.technician}</td>
+            <td>${lock.lockNumber}</td>
+            <td>${lock.date}</td>
+            <td>${lock.observations}</td>
+        `;
+        tr.onclick = () => highlightCard(lock.equipmentId);
+        tableBody.appendChild(tr);
+    });
+    
+    updateLocksCount();
+    updateKingOfLocks();
+}
+
+function highlightCard(equipmentId) {
+    const rows = document.querySelectorAll('.equipment-table tr');
+    rows.forEach(row => {
+        row.style.background = '';
+    });
+    
+    const selectedRow = Array.from(rows).find(row => 
+        row.children[0].textContent === equipmentId
+    );
+    if (selectedRow) {
+        selectedRow.style.background = '#ECF0F1';
+    }
+}
+
+setInterval(refreshData, 60000);
+refreshData();
+</script>
+</body>
+</html>

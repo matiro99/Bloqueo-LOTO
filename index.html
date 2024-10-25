@@ -348,6 +348,12 @@ body {
                     <select id="equipmentToUnlock">
                     </select>
                 </div>
+                <div class="form-group">
+                    <label>Técnico que Desbloquea:</label>
+                    <select id="unlockTechnician" required>
+                        <option value="">Seleccione un técnico</option>
+                    </select>
+                </div>
             </div>
             <div class="modal-footer">
                 <button class="btn cancel-btn" onclick="closeModal()">Cancelar</button>
@@ -408,7 +414,7 @@ body {
                 <div class="count-number" id="total-locks">3</div>
             </div>
             <div class="king-of-locks">
-                <div class="king-title">Rey del Bloqueo</div>
+                <div class="king-title">Rey del Bloqueo - <span id="current-month">Mayo 2023</span></div>
                 <div class="king-name" id="king-name">-</div>
                 <div class="king-stats" id="king-stats">-</div>
             </div>
@@ -475,113 +481,6 @@ let lockHistory = [
     }
 ];
 
-function openModal() {
-    document.getElementById('lockModal').style.display = 'flex';
-    populateDropdowns();
-    updateUnlockSelect();
-}
-
-function closeModal() {
-    document.getElementById('lockModal').style.display = 'none';
-    resetForm();
-}
-
-function toggleFormFields() {
-    const action = document.getElementById('actionType').value;
-    document.getElementById('lockForm').style.display = action === 'lock' ? 'block' : 'none';
-    document.getElementById('unlockForm').style.display = action === 'unlock' ? 'block' : 'none';
-    updateUnlockSelect();
-}
-
-function populateDropdowns() {
-    const equipmentSelect = document.getElementById('equipmentId');
-    equipmentSelect.innerHTML = '<option value="">Seleccione un equipo</option>';
-    equipmentOptions.forEach(equipment => {
-        const option = document.createElement('option');
-        option.value = equipment.id;
-        option.textContent = equipment.id;
-        equipmentSelect.appendChild(option);
-    });
-
-    const technicianSelect = document.getElementById('technician');
-    technicianSelect.innerHTML = '<option value="">Seleccione un técnico</option>';
-    technicianOptions.forEach(technician => {
-        const option = document.createElement('option');
-        option.value = technician;
-        option.textContent = technician;
-        technicianSelect.appendChild(option);
-    });
-
-    const lockNumberSelect = document.getElementById('lockNumber');
-    lockNumberSelect.innerHTML = '<option value="">Seleccione un candado</option>';
-    lockNumberOptions.forEach(lockNum => {
-        const option = document.createElement('option');
-        option.value = lockNum;
-        option.textContent = lockNum;
-        lockNumberSelect.appendChild(option);
-    });
-}
-
-function updateEquipmentName() {
-    const equipmentId = document.getElementById('equipmentId').value;
-    const equipment = equipmentOptions.find(eq => eq.id === equipmentId);
-    const equipmentNameInput = document.getElementById('equipmentName');
-    equipmentNameInput.value = equipment ? equipment.name : '';
-}
-
-function updateUnlockSelect() {
-    const select = document.getElementById('equipmentToUnlock');
-    select.innerHTML = '';
-    const activeEquipments = lockHistory.filter(lock => !lock.endTime);
-    
-    activeEquipments.forEach(equipment => {
-        const option = document.createElement('option');
-        option.value = equipment.equipmentId;
-        option.textContent = `${equipment.equipmentId} - ${equipment.name}`;
-        select.appendChild(option);
-    });
-}
-
-function submitLockUnlock() {
-    const action = document.getElementById('actionType').value;
-    
-    if (action === 'lock') {
-        const newLock = {
-            equipmentId: document.getElementById('equipmentId').value,
-            name: document.getElementById('equipmentName').value,
-            technician: document.getElementById('technician').value,
-            lockNumber: document.getElementById('lockNumber').value,
-            observations: document.getElementById('observations').value,
-            date: new Date().toLocaleString(),
-            startTime: new Date().toISOString(),
-            endTime: null
-        };
-        
-        lockHistory.push(newLock);
-    } else {
-        const equipmentId = document.getElementById('equipmentToUnlock').value;
-        const equipment = lockHistory.find(lock => lock.equipmentId === equipmentId && !lock.endTime);
-        
-        if (equipment) {
-            equipment.endTime = new Date().toISOString();
-        }
-    }
-    
-    refreshData();
-    closeModal();
-}
-
-function resetForm() {
-    document.getElementById('equipmentId').value = '';
-    document.getElementById('equipmentName').value = '';
-    document.getElementById('technician').value = '';
-    document.getElementById('lockNumber').value = '';
-    document.getElementById('observations').value = '';
-    document.getElementById('actionType').value = 'lock';
-    toggleFormFields();
-    populateDropdowns();
-}
-
 let monthlyLockHistory = [
     ...Array(15).fill().map(() => ({
         technician: 'Juan Pérez',
@@ -615,25 +514,220 @@ let monthlyLockHistory = [
     })),
 ];
 
-function calculateLockingKing() {
-    const technicianStats = {};
+function openModal() {
+    document.getElementById('lockModal').style.display = 'flex';
+    populateDropdowns();
+    updateUnlockSelect();
+}
+
+function closeModal() {
+    document.getElementById('lockModal').style.display = 'none';
+    resetForm();
+}
+
+function toggleFormFields() {
+    const action = document.getElementById('actionType').value;
+    document.getElementById('lockForm').style.display = action === 'lock' ? 'block' : 'none';
+    document.getElementById('unlockForm').style.display = action === 'unlock' ? 'block' : 'none';
     
-    monthlyLockHistory.forEach(action => {
-        if (!technicianStats[action.technician]) {
-            technicianStats[action.technician] = {
-                locks: 0,
-                unlocks: 0,
-                total: 0
-            };
+    if (action === 'unlock') {
+        // Populate unlock technician dropdown
+        const unlockTechnicianSelect = document.getElementById('unlockTechnician');
+        unlockTechnicianSelect.innerHTML = '<option value="">Seleccione un técnico</option>';
+        technicianOptions.forEach(technician => {
+            const option = document.createElement('option');
+            option.value = technician;
+            option.textContent = technician;
+            unlockTechnicianSelect.appendChild(option);
+        });
+    }
+    
+    updateUnlockSelect();
+}
+
+function populateDropdowns() {
+    const equipmentSelect = document.getElementById('equipmentId');
+    equipmentSelect.innerHTML = '<option value="">Seleccione un equipo</option>';
+    
+    const lockedEquipmentIds = lockHistory
+        .filter(lock => !lock.endTime)
+        .map(lock => lock.equipmentId);
+    
+    equipmentOptions
+        .filter(equipment => !lockedEquipmentIds.includes(equipment.id))
+        .forEach(equipment => {
+            const option = document.createElement('option');
+            option.value = equipment.id;
+            option.textContent = equipment.id;
+            equipmentSelect.appendChild(option);
+        });
+
+    const technicianSelect = document.getElementById('technician');
+    technicianSelect.innerHTML = '<option value="">Seleccione un técnico</option>';
+    technicianOptions.forEach(technician => {
+        const option = document.createElement('option');
+        option.value = technician;
+        option.textContent = technician;
+        technicianSelect.appendChild(option);
+    });
+
+    const usedLockNumbers = lockHistory
+        .filter(lock => !lock.endTime)
+        .map(lock => lock.lockNumber)
+        .flatMap(locks => locks.split(', '));
+
+    const lockNumberSelect = document.getElementById('lockNumber');
+    lockNumberSelect.innerHTML = '<option value="">Seleccione un candado</option>';
+    lockNumberOptions
+        .filter(lockNum => !usedLockNumbers.includes(lockNum))
+        .forEach(lockNum => {
+            const option = document.createElement('option');
+            option.value = lockNum;
+            option.textContent = lockNum;
+            lockNumberSelect.appendChild(option);
+        });
+}
+
+function updateEquipmentName() {
+    const equipmentId = document.getElementById('equipmentId').value;
+    const equipment = equipmentOptions.find(eq => eq.id === equipmentId);
+    const equipmentNameInput = document.getElementById('equipmentName');
+    equipmentNameInput.value = equipment ? equipment.name : '';
+}
+
+function updateUnlockSelect() {
+    const select = document.getElementById('equipmentToUnlock');
+    select.innerHTML = '';
+    const activeEquipments = lockHistory.filter(lock => !lock.endTime);
+    
+    activeEquipments.forEach(equipment => {
+        const option = document.createElement('option');
+        option.value = equipment.equipmentId;
+        option.textContent = `${equipment.equipmentId} - ${equipment.name}`;
+        select.appendChild(option);
+    });
+}
+
+function submitLockUnlock() {
+    const action = document.getElementById('actionType').value;
+    const currentDate = new Date();
+    
+    if (action === 'lock') {
+        const equipmentId = document.getElementById('equipmentId').value;
+        const lockNumber = document.getElementById('lockNumber').value;
+        const technician = document.getElementById('technician').value;
+        
+        const isEquipmentLocked = lockHistory.some(lock => 
+            lock.equipmentId === equipmentId && !lock.endTime
+        );
+        
+        const isLockInUse = lockHistory.some(lock => 
+            lock.lockNumber === lockNumber && !lock.endTime
+        );
+        
+        if (isEquipmentLocked) {
+            alert('Este equipo ya está bloqueado');
+            return;
         }
         
-        if (action.action === 'lock') {
-            technicianStats[action.technician].locks++;
-        } else {
-            technicianStats[action.technician].unlocks++;
+        if (isLockInUse) {
+            alert('Este candado ya está en uso');
+            return;
         }
-        technicianStats[action.technician].total++;
-    });
+
+        // Add to monthly stats
+        monthlyLockHistory.push({
+            technician: technician,
+            action: 'lock',
+            date: currentDate
+        });
+
+        const newLock = {
+            equipmentId: equipmentId,
+            name: document.getElementById('equipmentName').value,
+            technician: technician,
+            lockNumber: lockNumber,
+            observations: document.getElementById('observations').value,
+            date: currentDate.toLocaleString(),
+            startTime: currentDate.toISOString(),
+            endTime: null
+        };
+        
+        lockHistory.push(newLock);
+    } else {
+        const equipmentId = document.getElementById('equipmentToUnlock').value;
+        const unlockTechnician = document.getElementById('unlockTechnician').value;
+        
+        if (!unlockTechnician) {
+            alert('Por favor seleccione el técnico que desbloquea');
+            return;
+        }
+        
+        const equipment = lockHistory.find(lock => lock.equipmentId === equipmentId && !lock.endTime);
+        
+        if (equipment) {
+            equipment.endTime = currentDate.toISOString();
+            equipment.unlockTechnician = unlockTechnician;
+            
+            // Add to monthly stats
+            monthlyLockHistory.push({
+                technician: unlockTechnician,
+                action: 'unlock',
+                date: currentDate
+            });
+        }
+    }
+    
+    refreshData();
+    closeModal();
+}
+
+function resetForm() {
+    document.getElementById('equipmentId').value = '';
+    document.getElementById('equipmentName').value = '';
+    document.getElementById('technician').value = '';
+    document.getElementById('lockNumber').value = '';
+    document.getElementById('observations').value = '';
+    document.getElementById('actionType').value = 'lock';
+    toggleFormFields();
+    populateDropdowns();
+}
+
+function getCurrentMonthName() {
+    const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 
+                   'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    const now = new Date();
+    return `${months[now.getMonth()]} ${now.getFullYear()}`;
+}
+
+function calculateLockingKing() {
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+    
+    const technicianStats = {};
+    
+    monthlyLockHistory
+        .filter(action => {
+            const actionDate = new Date(action.date);
+            return actionDate.getMonth() === currentMonth && 
+                   actionDate.getFullYear() === currentYear;
+        })
+        .forEach(action => {
+            if (!technicianStats[action.technician]) {
+                technicianStats[action.technician] = {
+                    locks: 0,
+                    unlocks: 0,
+                    total: 0
+                };
+            }
+            
+            if (action.action === 'lock') {
+                technicianStats[action.technician].locks++;
+            } else {
+                technicianStats[action.technician].unlocks++;
+            }
+            technicianStats[action.technician].total++;
+        });
 
     let kingTechnician = null;
     let maxOperations = 0;
@@ -653,10 +747,15 @@ function calculateLockingKing() {
 
 function updateKingOfLocks() {
     const king = calculateLockingKing();
+    document.getElementById('current-month').textContent = getCurrentMonthName();
+    
     if (king) {
         document.getElementById('king-name').textContent = king.name;
         document.getElementById('king-stats').textContent = 
             `Bloqueos: ${king.stats.locks} | Desbloqueos: ${king.stats.unlocks} | Total: ${king.stats.total}`;
+    } else {
+        document.getElementById('king-name').textContent = '-';
+        document.getElementById('king-stats').textContent = 'No hay actividad este mes';
     }
 }
 
@@ -736,11 +835,40 @@ function handleFileUpload(files) {
         try {
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, {type: 'array'});
-            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData = XLSX.utils.sheet_to_json(firstSheet);
-            processUploadedData(jsonData);
+            
+            // Process each sheet separately
+            // Equipos sheet
+            if (workbook.SheetNames.includes('Equipos')) {
+                const equiposSheet = workbook.Sheets['Equipos'];
+                const equiposData = XLSX.utils.sheet_to_json(equiposSheet);
+                updateEquipmentOptions(equiposData);
+            }
+            
+            // Técnicos sheet
+            if (workbook.SheetNames.includes('Técnicos')) {
+                const tecnicosSheet = workbook.Sheets['Técnicos'];
+                const tecnicosData = XLSX.utils.sheet_to_json(tecnicosSheet);
+                updateTechnicianOptions(tecnicosData);
+            }
+            
+            // Candados sheet
+            if (workbook.SheetNames.includes('Candados')) {
+                const candadosSheet = workbook.Sheets['Candados'];
+                const candadosData = XLSX.utils.sheet_to_json(candadosSheet);
+                updateLockNumberOptions(candadosData);
+            }
+            
+            // Historial sheet
+            if (workbook.SheetNames.includes('Historial')) {
+                const historialSheet = workbook.Sheets['Historial'];
+                const historialData = XLSX.utils.sheet_to_json(historialSheet);
+                updateLockHistory(historialData);
+            }
+
             alert('Data cargada exitosamente');
             closeDataModal();
+            refreshData();
+            populateDropdowns();
         } catch (error) {
             alert('Error al procesar el archivo: ' + error.message);
         }
@@ -749,27 +877,52 @@ function handleFileUpload(files) {
     reader.readAsArrayBuffer(file);
 }
 
-function processUploadedData(jsonData) {
-    equipmentOptions.length = 0;
-    technicianOptions.length = 0;
-    lockNumberOptions.length = 0;
-    
-    jsonData.forEach(row => {
-        if (row.equipment_id && row.equipment_name) {
+function updateEquipmentOptions(data) {
+    equipmentOptions.length = 0; // Clear existing data
+    data.forEach(row => {
+        if (row['Código Equipo'] && row['Nombre Equipo']) {
             equipmentOptions.push({
-                id: row.equipment_id,
-                name: row.equipment_name
+                id: row['Código Equipo'],
+                name: row['Nombre Equipo']
             });
         }
-        if (row.technician && !technicianOptions.includes(row.technician)) {
-            technicianOptions.push(row.technician);
-        }
-        if (row.lock_number && !lockNumberOptions.includes(row.lock_number)) {
-            lockNumberOptions.push(row.lock_number);
+    });
+}
+
+function updateTechnicianOptions(data) {
+    technicianOptions.length = 0; // Clear existing data
+    data.forEach(row => {
+        if (row['Técnico'] && !technicianOptions.includes(row['Técnico'])) {
+            technicianOptions.push(row['Técnico']);
         }
     });
-    
-    populateDropdowns();
+}
+
+function updateLockNumberOptions(data) {
+    lockNumberOptions.length = 0; // Clear existing data
+    data.forEach(row => {
+        if (row['Número de Candado'] && !lockNumberOptions.includes(row['Número de Candado'])) {
+            lockNumberOptions.push(row['Número de Candado'].toString());
+        }
+    });
+}
+
+function updateLockHistory(data) {
+    lockHistory.length = 0; // Clear existing data
+    data.forEach(row => {
+        if (row['Código'] && row['Nombre']) {
+            lockHistory.push({
+                equipmentId: row['Código'],
+                name: row['Nombre'],
+                technician: row['Técnico'],
+                lockNumber: row['N° Candado'],
+                date: row['Fecha'],
+                observations: row['Observaciones'],
+                startTime: row['Inicio Bloqueo'],
+                endTime: row['Fin Bloqueo'] === 'En curso' ? null : row['Fin Bloqueo']
+            });
+        }
+    });
 }
 
 function updateLocksCount() {

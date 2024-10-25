@@ -481,38 +481,7 @@ let lockHistory = [
     }
 ];
 
-let monthlyLockHistory = [
-    ...Array(15).fill().map(() => ({
-        technician: 'Juan Pérez',
-        action: 'lock',
-        date: new Date()
-    })),
-    ...Array(12).fill().map(() => ({
-        technician: 'Juan Pérez',
-        action: 'unlock',
-        date: new Date()
-    })),
-    ...Array(20).fill().map(() => ({
-        technician: 'María García',
-        action: 'lock',
-        date: new Date()
-    })),
-    ...Array(18).fill().map(() => ({
-        technician: 'María García',
-        action: 'unlock',
-        date: new Date()
-    })),
-    ...Array(10).fill().map(() => ({
-        technician: 'Carlos Rodríguez',
-        action: 'lock',
-        date: new Date()
-    })),
-    ...Array(8).fill().map(() => ({
-        technician: 'Carlos Rodríguez',
-        action: 'unlock',
-        date: new Date()
-    })),
-];
+let monthlyLockHistory = []; // Reset to empty array instead of pre-filled data
 
 function openModal() {
     document.getElementById('lockModal').style.display = 'flex';
@@ -531,7 +500,6 @@ function toggleFormFields() {
     document.getElementById('unlockForm').style.display = action === 'unlock' ? 'block' : 'none';
     
     if (action === 'unlock') {
-        // Populate unlock technician dropdown
         const unlockTechnicianSelect = document.getElementById('unlockTechnician');
         unlockTechnicianSelect.innerHTML = '<option value="">Seleccione un técnico</option>';
         technicianOptions.forEach(technician => {
@@ -635,7 +603,6 @@ function submitLockUnlock() {
             return;
         }
 
-        // Add to monthly stats
         monthlyLockHistory.push({
             technician: technician,
             action: 'lock',
@@ -669,7 +636,6 @@ function submitLockUnlock() {
             equipment.endTime = currentDate.toISOString();
             equipment.unlockTechnician = unlockTechnician;
             
-            // Add to monthly stats
             monthlyLockHistory.push({
                 technician: unlockTechnician,
                 action: 'unlock',
@@ -836,36 +802,50 @@ function handleFileUpload(files) {
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, {type: 'array'});
             
+            let updatesCount = 0;
+            
             // Process each sheet separately
             // Equipos sheet
             if (workbook.SheetNames.includes('Equipos')) {
                 const equiposSheet = workbook.Sheets['Equipos'];
                 const equiposData = XLSX.utils.sheet_to_json(equiposSheet);
-                updateEquipmentOptions(equiposData);
+                if (equiposData.length > 0) {
+                    updateEquipmentOptions(equiposData);
+                    updatesCount++;
+                }
             }
             
             // Técnicos sheet
             if (workbook.SheetNames.includes('Técnicos')) {
                 const tecnicosSheet = workbook.Sheets['Técnicos'];
                 const tecnicosData = XLSX.utils.sheet_to_json(tecnicosSheet);
-                updateTechnicianOptions(tecnicosData);
+                if (tecnicosData.length > 0) {
+                    updateTechnicianOptions(tecnicosData);
+                    updatesCount++;
+                }
             }
             
             // Candados sheet
             if (workbook.SheetNames.includes('Candados')) {
                 const candadosSheet = workbook.Sheets['Candados'];
                 const candadosData = XLSX.utils.sheet_to_json(candadosSheet);
-                updateLockNumberOptions(candadosData);
+                if (candadosData.length > 0) {
+                    updateLockNumberOptions(candadosData);
+                    updatesCount++;
+                }
             }
             
             // Historial sheet
             if (workbook.SheetNames.includes('Historial')) {
                 const historialSheet = workbook.Sheets['Historial'];
                 const historialData = XLSX.utils.sheet_to_json(historialSheet);
-                updateLockHistory(historialData);
+                if (historialData.length > 0) {
+                    updateLockHistory(historialData);
+                    updatesCount++;
+                }
             }
 
-            alert('Data cargada exitosamente');
+            alert(`Data cargada exitosamente. Se actualizaron ${updatesCount} hojas de datos.`);
             closeDataModal();
             refreshData();
             populateDropdowns();
@@ -881,10 +861,14 @@ function updateEquipmentOptions(data) {
     equipmentOptions.length = 0; // Clear existing data
     data.forEach(row => {
         if (row['Código Equipo'] && row['Nombre Equipo']) {
-            equipmentOptions.push({
-                id: row['Código Equipo'],
-                name: row['Nombre Equipo']
-            });
+            const newEquipment = {
+                id: row['Código Equipo'].toString().trim(),
+                name: row['Nombre Equipo'].toString().trim()
+            };
+            // Only add if not duplicate
+            if (!equipmentOptions.some(eq => eq.id === newEquipment.id)) {
+                equipmentOptions.push(newEquipment);
+            }
         }
     });
 }
@@ -892,8 +876,11 @@ function updateEquipmentOptions(data) {
 function updateTechnicianOptions(data) {
     technicianOptions.length = 0; // Clear existing data
     data.forEach(row => {
-        if (row['Técnico'] && !technicianOptions.includes(row['Técnico'])) {
-            technicianOptions.push(row['Técnico']);
+        if (row['Técnico']) {
+            const techName = row['Técnico'].toString().trim();
+            if (!technicianOptions.includes(techName)) {
+                technicianOptions.push(techName);
+            }
         }
     });
 }
@@ -901,8 +888,11 @@ function updateTechnicianOptions(data) {
 function updateLockNumberOptions(data) {
     lockNumberOptions.length = 0; // Clear existing data
     data.forEach(row => {
-        if (row['Número de Candado'] && !lockNumberOptions.includes(row['Número de Candado'])) {
-            lockNumberOptions.push(row['Número de Candado'].toString());
+        if (row['Número de Candado']) {
+            const lockNum = row['Número de Candado'].toString().trim();
+            if (!lockNumberOptions.includes(lockNum)) {
+                lockNumberOptions.push(lockNum);
+            }
         }
     });
 }

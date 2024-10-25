@@ -483,6 +483,28 @@ let lockHistory = [
 
 let monthlyLockHistory = []; // Reset to empty array instead of pre-filled data
 
+function saveToLocalStorage() {
+    localStorage.setItem('equipmentOptions', JSON.stringify(equipmentOptions));
+    localStorage.setItem('technicianOptions', JSON.stringify(technicianOptions));
+    localStorage.setItem('lockNumberOptions', JSON.stringify(lockNumberOptions));
+    localStorage.setItem('lockHistory', JSON.stringify(lockHistory));
+    localStorage.setItem('monthlyLockHistory', JSON.stringify(monthlyLockHistory));
+}
+
+function loadFromLocalStorage() {
+    const savedEquipmentOptions = localStorage.getItem('equipmentOptions');
+    const savedTechnicianOptions = localStorage.getItem('technicianOptions');
+    const savedLockNumberOptions = localStorage.getItem('lockNumberOptions');
+    const savedLockHistory = localStorage.getItem('lockHistory');
+    const savedMonthlyLockHistory = localStorage.getItem('monthlyLockHistory');
+
+    if (savedEquipmentOptions) equipmentOptions.splice(0, equipmentOptions.length, ...JSON.parse(savedEquipmentOptions));
+    if (savedTechnicianOptions) technicianOptions.splice(0, technicianOptions.length, ...JSON.parse(savedTechnicianOptions));
+    if (savedLockNumberOptions) lockNumberOptions.splice(0, lockNumberOptions.length, ...JSON.parse(savedLockNumberOptions));
+    if (savedLockHistory) lockHistory.splice(0, lockHistory.length, ...JSON.parse(savedLockHistory));
+    if (savedMonthlyLockHistory) monthlyLockHistory.splice(0, monthlyLockHistory.length, ...JSON.parse(savedMonthlyLockHistory));
+}
+
 function openModal() {
     document.getElementById('lockModal').style.display = 'flex';
     populateDropdowns();
@@ -644,6 +666,7 @@ function submitLockUnlock() {
         }
     }
     
+    saveToLocalStorage();
     refreshData();
     closeModal();
 }
@@ -871,6 +894,7 @@ function updateEquipmentOptions(data) {
             }
         }
     });
+    saveToLocalStorage(); // Add at the end of the function
 }
 
 function updateTechnicianOptions(data) {
@@ -883,6 +907,7 @@ function updateTechnicianOptions(data) {
             }
         }
     });
+    saveToLocalStorage(); // Add at the end of the function
 }
 
 function updateLockNumberOptions(data) {
@@ -895,6 +920,7 @@ function updateLockNumberOptions(data) {
             }
         }
     });
+    saveToLocalStorage(); // Add at the end of the function
 }
 
 function updateLockHistory(data) {
@@ -913,6 +939,7 @@ function updateLockHistory(data) {
             });
         }
     });
+    saveToLocalStorage(); // Add at the end of the function
 }
 
 function updateLocksCount() {
@@ -959,8 +986,12 @@ function highlightCard(equipmentId) {
     }
 }
 
+document.addEventListener('DOMContentLoaded', () => {
+    loadFromLocalStorage();
+    refreshData();
+});
+
 setInterval(refreshData, 60000);
-refreshData();
 </script>
 </body>
 </html>
